@@ -1,3 +1,4 @@
+
 import { WebNfcProfile, BASE_URL_PREFIX } from '../types';
 
 // Initial mock data based on user request
@@ -11,6 +12,31 @@ const INITIAL_DATA: WebNfcProfile[] = [
     interactions: 340,
     lastActive: '2023-10-25',
     status: 'active',
+    title: 'Senior Architect',
+    bio: 'Designing the future, one building at a time.',
+    titleEn: 'Senior Architect',
+    bioEn: 'Designing the future, one building at a time.',
+    phoneNumber: '0972133680',
+    zaloNumber: '0972133680',
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Andy',
+    coverUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80',
+    socialLinks: [
+        { 
+            id: 's1', 
+            platform: 'facebook', 
+            label: 'Facebook', 
+            url: 'https://facebook.com',
+            iconUrl: 'https://i.ibb.co/67VF7N5R/Facebook.png'
+        },
+        { 
+            id: 's2', 
+            platform: 'zalo', 
+            label: 'Zalo', 
+            url: 'https://zalo.me/0972133680',
+            iconUrl: 'https://i.ibb.co/d4nRhVQV/Zalo.png'
+        }
+    ],
+    projects: []
   },
   {
     id: '2',
@@ -21,6 +47,13 @@ const INITIAL_DATA: WebNfcProfile[] = [
     interactions: 120,
     lastActive: '2023-10-26',
     status: 'active',
+    title: 'Interior Designer',
+    bio: 'Creating spaces that breathe.',
+    phoneNumber: '0909888777',
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jaden',
+    coverUrl: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80',
+    socialLinks: [],
+    projects: []
   },
   {
     id: '3',
@@ -31,6 +64,11 @@ const INITIAL_DATA: WebNfcProfile[] = [
     interactions: 890,
     lastActive: '2023-10-24',
     status: 'active',
+    title: 'Project Manager',
+    bio: 'Everything on time, under budget.',
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Tan',
+    socialLinks: [],
+    projects: []
   }
 ];
 
@@ -46,18 +84,21 @@ export const getProfiles = (): WebNfcProfile[] => {
   return INITIAL_DATA;
 };
 
-export const addProfile = (name: string, slugRaw: string): WebNfcProfile => {
+export const addProfile = (profileData: Omit<WebNfcProfile, 'id' | 'visits' | 'interactions' | 'lastActive' | 'status' | 'fullUrl'>): WebNfcProfile => {
   const profiles = getProfiles();
   
   // Clean slug input to ensure consistency
-  let slug = slugRaw.trim();
+  let slug = profileData.slug.trim();
+  // Remove generic URL parts if user pasted full URL
+  slug = slug.replace('https://', '').replace('http://', '').replace(BASE_URL_PREFIX, '');
+  
   if (!slug.endsWith('.github.io')) {
     slug += '.github.io';
   }
 
   const newProfile: WebNfcProfile = {
     id: Date.now().toString(),
-    name,
+    ...profileData,
     slug,
     fullUrl: `${BASE_URL_PREFIX}${slug}/`,
     visits: 0,

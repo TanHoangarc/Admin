@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, List, ShieldCheck, Menu, X } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
@@ -17,8 +18,8 @@ export default function App() {
     setProfiles(getProfiles());
   }, []);
 
-  const handleAddProfile = (name: string, slug: string) => {
-    const newProfile = addProfile(name, slug);
+  const handleAddProfile = (profileData: Omit<WebNfcProfile, 'id' | 'visits' | 'interactions' | 'lastActive' | 'status' | 'fullUrl'>) => {
+    const newProfile = addProfile(profileData);
     setProfiles(prev => [...prev, newProfile]);
   };
 
@@ -90,7 +91,7 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto pt-20 md:pt-0">
+      <main className="flex-1 overflow-y-auto pt-20 md:pt-0 h-screen">
         <div className="max-w-7xl mx-auto p-4 md:p-8">
             {currentView === 'dashboard' && (
                 <Dashboard 
