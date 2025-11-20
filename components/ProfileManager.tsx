@@ -289,6 +289,38 @@ const generateHtmlTemplate = (profile: WebNfcProfile) => {
         const t = data.content[lang];
 
         const openQr = (url, title, desc) => { setActiveQr({url, title, desc}); setQrOpen(true); }
+        
+        const handleSaveContact = () => {
+             const fullName = t.title || data.name;
+             const phone = (data.phoneContact || "").replace(/\\s/g, '');
+             const emailObj = data.socialLinks.find(s => s.id === 'email');
+             const email = emailObj ? emailObj.href.replace('mailto:', '') : "";
+             const webObj = data.socialLinks.find(s => s.id === 'website');
+             const website = webObj ? webObj.href : window.location.href;
+             const org = (t.roles && t.roles.length > 0) ? t.roles[0] : "";
+             const jobTitle = t.subtitle || "";
+             const desc = t.description ? t.description.join('\\\\n') : "";
+
+             let vcard = "BEGIN:VCARD\\nVERSION:3.0\\n";
+             vcard += \`FN:\${fullName}\\n\`;
+             vcard += \`N:;\${fullName};;;\\n\`;
+             if (org) vcard += \`ORG:\${org}\\n\`;
+             if (jobTitle) vcard += \`TITLE:\${jobTitle}\\n\`;
+             if (phone) vcard += \`TEL;TYPE=CELL:\${phone}\\n\`;
+             if (email) vcard += \`EMAIL;TYPE=WORK:\${email}\\n\`;
+             if (website) vcard += \`URL:\${website}\\n\`;
+             if (desc) vcard += \`NOTE:\${desc}\\n\`;
+             vcard += "END:VCARD";
+
+             const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
+             const url = URL.createObjectURL(blob);
+             const a = document.createElement('a');
+             a.href = url;
+             a.download = \`\${fullName.replace(/\\s+/g, '_')}.vcf\`;
+             document.body.appendChild(a);
+             a.click();
+             document.body.removeChild(a);
+        };
 
         return (
           <div className="min-h-screen bg-[#E5E5E5]">
@@ -342,7 +374,7 @@ const generateHtmlTemplate = (profile: WebNfcProfile) => {
 
                    <div className="grid grid-cols-2 gap-4 mb-8">
                       <button onClick={() => navigator.share ? navigator.share({title: t.title, url: window.location.href}) : alert('Copied!')} className="flex items-center justify-center gap-2 bg-gray-100/80 py-3 rounded-xl font-medium"><Icons.Share2 /> {t.share}</button>
-                      <button className="flex items-center justify-center gap-2 bg-gray-100/80 py-3 rounded-xl font-medium"><Icons.Download /> {t.saveContact}</button>
+                      <button onClick={handleSaveContact} className="flex items-center justify-center gap-2 bg-gray-100/80 py-3 rounded-xl font-medium"><Icons.Download /> {t.saveContact}</button>
                    </div>
 
                    <button onClick={() => setConsultOpen(true)} className="bg-[#0033cc] text-white px-8 py-3 rounded-xl font-bold shadow-lg w-full mb-6">{t.consultButton}</button>
