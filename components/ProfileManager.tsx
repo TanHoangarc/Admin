@@ -42,7 +42,7 @@ const generateHtmlTemplate = (profile: WebNfcProfile) => {
       avatar: profile.avatarUrl || 'https://i.ibb.co/4RKTydDT/Andy.jpg',
       avatarQr: profile.avatarUrl || '', 
       cover: profile.coverUrl || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-      roleIcon: profile.avatarUrl || 'https://via.placeholder.com/50',
+      roleIcon: "https://i.ibb.co/VY0kfHdv/Logo-Nhon-My-700x700-2-150x150.png",
       flagVi: "https://flagcdn.com/w40/vn.png",
       flagEn: "https://flagcdn.com/w40/us.png",
     },
