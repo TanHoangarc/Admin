@@ -1,0 +1,5 @@
+{
+  "name": "NFC Link Manager",
+  "description": "A centralized dashboard to manage, track, and edit personal Web NFC profile pages.",
+  "requestFramePermissions": []
+}
