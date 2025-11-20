@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, List, ShieldCheck, Menu, X } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 import { ProfileManager } from './components/ProfileManager';
-import { getProfiles, addProfile, deleteProfile } from './services/mockService';
+import { getProfiles, addProfile, deleteProfile, updateProfile } from './services/mockService';
 import { WebNfcProfile } from './types';
 
 type View = 'dashboard' | 'profiles';
@@ -21,6 +21,12 @@ export default function App() {
   const handleAddProfile = (profileData: Omit<WebNfcProfile, 'id' | 'visits' | 'interactions' | 'lastActive' | 'status' | 'fullUrl'>) => {
     const newProfile = addProfile(profileData);
     setProfiles(prev => [...prev, newProfile]);
+    return newProfile;
+  };
+
+  const handleUpdateProfile = (id: string, updates: Partial<WebNfcProfile>) => {
+    updateProfile(id, updates);
+    setProfiles(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
   };
 
   const handleDeleteProfile = (id: string) => {
@@ -103,7 +109,8 @@ export default function App() {
                 <ProfileManager 
                     profiles={profiles} 
                     onAdd={handleAddProfile} 
-                    onDelete={handleDeleteProfile} 
+                    onDelete={handleDeleteProfile}
+                    onUpdate={handleUpdateProfile}
                 />
             )}
         </div>

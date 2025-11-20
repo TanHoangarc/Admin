@@ -19,7 +19,7 @@ export interface Project {
 
 export interface WebNfcProfile {
   id: string;
-  name: string; // e.g., "Andy"
+  name: string; // e.g., "Andy" - Internal Name / Slug base
   slug: string; // e.g., "Andy.github.io" - used for URL construction
   fullUrl: string;
   
@@ -30,18 +30,24 @@ export interface WebNfcProfile {
   status: 'active' | 'maintenance';
 
   // Content for Generating the Page
-  title?: string; // e.g. "Senior Architect"
-  bio?: string;
+  // Vietnamese
+  title?: string; // Subtitle (Chức danh)
+  bio?: string;   // Description
+  headerTitleVi?: string; // NEW: Tên tiêu đề ở trên cùng
+  footerRoleVi?: string;  // NEW: Chức vụ ở cuối cùng
   
   // English Content
-  titleEn?: string;
-  bioEn?: string;
+  titleEn?: string; // Subtitle (Job Title)
+  bioEn?: string;   // Description
+  headerTitleEn?: string; // NEW: Header Title
+  footerRoleEn?: string;  // NEW: Footer Role
 
   phoneNumber?: string;
   zaloNumber?: string;
   
   avatarUrl?: string;
   coverUrl?: string;
+  mainQrUrl?: string; // NEW: Explicit QR Code Image URL
   socialLinks: SocialLink[];
   projects?: Project[];
 }
