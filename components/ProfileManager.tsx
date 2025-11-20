@@ -30,6 +30,26 @@ const SOCIAL_PRESETS = [
     { id: 'tcb', label: 'TCB', icon: 'https://i.ibb.co/FktVzW2z/Tcb.png' },
 ];
 
+const DEFAULT_TITLES = [
+  "Accounting Department",
+  "Documentation Department",
+  "Business Development Department",
+  "Overseas Sales",
+  "Overseas Manager",
+  "Leader Business Development"
+];
+
+const DEFAULT_ROLES = [
+  "Account – Công ty Long Hoàng Logistics",
+  "Documentation – Công ty Long Hoàng Logistics",
+  "Sales Logistics – Công ty Long Hoàng Logistics",
+  "Overseas Sales – Công ty Long Hoàng Logistics",
+  "Overseas Manager – Công ty Long Hoàng Logistics",
+  "Leader Team Sale 1 Long Hoàng",
+  "Leader Team Sale 2 Long Hoàng",
+  "Leader Team Sale 3 Long Hoàng"
+];
+
 // Template for the generated HTML file
 const generateHtmlTemplate = (profile: WebNfcProfile) => {
   // Map the current profile data to the structure expected by the new template
@@ -419,6 +439,10 @@ export const ProfileManager: React.FC<ProfileManagerProps> = ({ profiles, onAdd,
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // Dynamic Lists State
+  const [titlesList, setTitlesList] = useState<string[]>(DEFAULT_TITLES);
+  const [rolesList, setRolesList] = useState<string[]>(DEFAULT_ROLES);
+
   // Form State
   const [formData, setFormData] = useState<Omit<WebNfcProfile, 'id' | 'visits' | 'interactions' | 'lastActive' | 'status' | 'fullUrl'>>({
     name: '',
@@ -608,6 +632,28 @@ export const ProfileManager: React.FC<ProfileManagerProps> = ({ profiles, onAdd,
   const copyJson = () => {
       navigator.clipboard.writeText(JSON.stringify(formData, null, 2));
       alert("Profile JSON copied to clipboard!");
+  };
+
+  const handleAddCustomTitle = () => {
+      const newTitle = window.prompt("Nhập chức danh / tiêu đề mới:");
+      if (newTitle && newTitle.trim()) {
+          const trimmed = newTitle.trim();
+          if (!titlesList.includes(trimmed)) {
+              setTitlesList([...titlesList, trimmed]);
+          }
+          setFormData({ ...formData, title: trimmed });
+      }
+  };
+
+  const handleAddCustomRole = () => {
+      const newRole = window.prompt("Nhập chức vụ mới:");
+      if (newRole && newRole.trim()) {
+          const trimmed = newRole.trim();
+          if (!rolesList.includes(trimmed)) {
+              setRolesList([...rolesList, trimmed]);
+          }
+          setFormData({ ...formData, footerRoleVi: trimmed });
+      }
   };
 
   return (
@@ -945,13 +991,28 @@ export const ProfileManager: React.FC<ProfileManagerProps> = ({ profiles, onAdd,
 
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Chức danh / Tiêu đề</label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.title}
-                                        onChange={e => setFormData({...formData, title: e.target.value})}
-                                        placeholder="Ví dụ: Kiến trúc sư trưởng"
-                                        className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                                    />
+                                    <div className="flex gap-2">
+                                        <select 
+                                            value={formData.title}
+                                            onChange={e => setFormData({...formData, title: e.target.value})}
+                                            className="flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white"
+                                        >
+                                            <option value="">-- Chọn Chức danh --</option>
+                                            {titlesList.map((t) => (
+                                                <option key={t} value={t}>{t}</option>
+                                            ))}
+                                            {!titlesList.includes(formData.title) && formData.title && (
+                                                <option value={formData.title}>{formData.title}</option>
+                                            )}
+                                        </select>
+                                        <button 
+                                            onClick={handleAddCustomTitle}
+                                            className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 p-2 rounded-lg border border-indigo-200 transition-colors"
+                                            title="Thêm chức danh mới"
+                                        >
+                                            <Plus size={20} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div>
@@ -967,13 +1028,28 @@ export const ProfileManager: React.FC<ProfileManagerProps> = ({ profiles, onAdd,
 
                                 <div className="pt-4 border-t border-slate-100">
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Chức vụ (Cuối trang)</label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.footerRoleVi || ''}
-                                        onChange={e => setFormData({...formData, footerRoleVi: e.target.value})}
-                                        placeholder="Ví dụ: Leader Team Sale 1 – Công ty Long Hoàng Logistics"
-                                        className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                                    />
+                                    <div className="flex gap-2">
+                                        <select 
+                                            value={formData.footerRoleVi || ''}
+                                            onChange={e => setFormData({...formData, footerRoleVi: e.target.value})}
+                                            className="flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white"
+                                        >
+                                            <option value="">-- Chọn Chức vụ --</option>
+                                            {rolesList.map((r) => (
+                                                <option key={r} value={r}>{r}</option>
+                                            ))}
+                                            {!rolesList.includes(formData.footerRoleVi || '') && formData.footerRoleVi && (
+                                                <option value={formData.footerRoleVi}>{formData.footerRoleVi}</option>
+                                            )}
+                                        </select>
+                                        <button 
+                                            onClick={handleAddCustomRole}
+                                            className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 p-2 rounded-lg border border-indigo-200 transition-colors"
+                                            title="Thêm chức vụ mới"
+                                        >
+                                            <Plus size={20} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
