@@ -293,23 +293,14 @@ const generateHtmlTemplate = (profile: WebNfcProfile) => {
         const handleSaveContact = () => {
              const fullName = t.title || data.name;
              const phone = (data.phoneContact || "").replace(/\\s/g, '');
-             const emailObj = data.socialLinks.find(s => s.id === 'email');
-             const email = emailObj ? emailObj.href.replace('mailto:', '') : "";
              const webObj = data.socialLinks.find(s => s.id === 'website');
              const website = webObj ? webObj.href : window.location.href;
-             const org = (t.roles && t.roles.length > 0) ? t.roles[0] : "";
-             const jobTitle = t.subtitle || "";
-             const desc = t.description ? t.description.join('\\\\n') : "";
 
              let vcard = "BEGIN:VCARD\\nVERSION:3.0\\n";
              vcard += \`FN:\${fullName}\\n\`;
              vcard += \`N:;\${fullName};;;\\n\`;
-             if (org) vcard += \`ORG:\${org}\\n\`;
-             if (jobTitle) vcard += \`TITLE:\${jobTitle}\\n\`;
              if (phone) vcard += \`TEL;TYPE=CELL:\${phone}\\n\`;
-             if (email) vcard += \`EMAIL;TYPE=WORK:\${email}\\n\`;
              if (website) vcard += \`URL:\${website}\\n\`;
-             if (desc) vcard += \`NOTE:\${desc}\\n\`;
              vcard += "END:VCARD";
 
              const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
