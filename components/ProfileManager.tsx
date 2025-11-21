@@ -30,6 +30,13 @@ const SOCIAL_PRESETS = [
     { id: 'tcb', label: 'TCB', icon: 'https://i.ibb.co/FktVzW2z/Tcb.png' },
 ];
 
+const DEFAULT_SOCIAL_URLS: Record<string, string> = {
+    zalo: "https://zalo.me/",
+    email: "mailto:jacky@longhoanglogistics.com",
+    map: "https://maps.app.goo.gl/ZSVFYotTCuGWNQmW8",
+    website: "https://www.longhoanglogistics.com"
+};
+
 const DEFAULT_TITLES = [
   "Accounting Department",
   "Documentation Department",
@@ -530,12 +537,14 @@ export const ProfileManager: React.FC<ProfileManagerProps> = ({ profiles, onAdd,
 
   const addSocialLink = (presetId: string) => {
     const preset = SOCIAL_PRESETS.find(p => p.id === presetId);
+    const defaultUrl = DEFAULT_SOCIAL_URLS[presetId] || '';
+
     setFormData(prev => ({
         ...prev,
         socialLinks: [...prev.socialLinks, {
             id: Date.now().toString(),
             platform: presetId as any,
-            url: '',
+            url: defaultUrl,
             label: preset?.label || 'New Link',
             iconUrl: preset?.icon || '',
             qrImageUrl: ''
