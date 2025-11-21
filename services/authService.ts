@@ -1,3 +1,4 @@
+
 import { AuthUser, UserRole } from '../types';
 
 const AUTH_STORAGE_KEY = 'nfc_auth_user';
