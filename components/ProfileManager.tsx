@@ -50,6 +50,17 @@ const DEFAULT_ROLES = [
   "Leader Team Sale 3 Long Hoàng"
 ];
 
+const DEFAULT_ROLES_EN = [
+  "Account – Long Hoang Logistics Co.,ltd",
+  "Documentation – Long Hoang Logistics Co.,ltd",
+  "Sales Logistics – Long Hoang Logistics Co.,ltd",
+  "Overseas Sales – Long Hoang Logistics Co.,ltd",
+  "Overseas Manager – Long Hoang Logistics Co.,ltd",
+  "Leader Team Sale 1 - Long Hoang Logistics Co.,ltd",
+  "Leader Team Sale 2 - Long Hoang Logistics Co.,ltd",
+  "Leader Team Sale 3 - Long Hoang Logistics Co.,ltd"
+];
+
 // Template for the generated HTML file
 const generateHtmlTemplate = (profile: WebNfcProfile) => {
   // Map the current profile data to the structure expected by the new template
@@ -442,6 +453,9 @@ export const ProfileManager: React.FC<ProfileManagerProps> = ({ profiles, onAdd,
   // Dynamic Lists State
   const [titlesList, setTitlesList] = useState<string[]>(DEFAULT_TITLES);
   const [rolesList, setRolesList] = useState<string[]>(DEFAULT_ROLES);
+  
+  const [titlesEnList, setTitlesEnList] = useState<string[]>(DEFAULT_TITLES);
+  const [rolesEnList, setRolesEnList] = useState<string[]>(DEFAULT_ROLES_EN);
 
   // Form State
   const [formData, setFormData] = useState<Omit<WebNfcProfile, 'id' | 'visits' | 'interactions' | 'lastActive' | 'status' | 'fullUrl'>>({
@@ -653,6 +667,28 @@ export const ProfileManager: React.FC<ProfileManagerProps> = ({ profiles, onAdd,
               setRolesList([...rolesList, trimmed]);
           }
           setFormData({ ...formData, footerRoleVi: trimmed });
+      }
+  };
+
+  const handleAddCustomTitleEn = () => {
+      const newTitle = window.prompt("Enter new Job Title:");
+      if (newTitle && newTitle.trim()) {
+          const trimmed = newTitle.trim();
+          if (!titlesEnList.includes(trimmed)) {
+              setTitlesEnList([...titlesEnList, trimmed]);
+          }
+          setFormData({ ...formData, titleEn: trimmed });
+      }
+  };
+
+  const handleAddCustomRoleEn = () => {
+      const newRole = window.prompt("Enter new Footer Role:");
+      if (newRole && newRole.trim()) {
+          const trimmed = newRole.trim();
+          if (!rolesEnList.includes(trimmed)) {
+              setRolesEnList([...rolesEnList, trimmed]);
+          }
+          setFormData({ ...formData, footerRoleEn: trimmed });
       }
   };
 
@@ -1072,13 +1108,28 @@ export const ProfileManager: React.FC<ProfileManagerProps> = ({ profiles, onAdd,
 
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Job Title</label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.titleEn}
-                                        onChange={e => setFormData({...formData, titleEn: e.target.value})}
-                                        placeholder="e.g. Senior Architect"
-                                        className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                                    />
+                                    <div className="flex gap-2">
+                                        <select 
+                                            value={formData.titleEn || ''}
+                                            onChange={e => setFormData({...formData, titleEn: e.target.value})}
+                                            className="flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white"
+                                        >
+                                            <option value="">-- Select Job Title --</option>
+                                            {titlesEnList.map((t) => (
+                                                <option key={t} value={t}>{t}</option>
+                                            ))}
+                                            {!titlesEnList.includes(formData.titleEn || '') && formData.titleEn && (
+                                                <option value={formData.titleEn}>{formData.titleEn}</option>
+                                            )}
+                                        </select>
+                                        <button 
+                                            onClick={handleAddCustomTitleEn}
+                                            className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 p-2 rounded-lg border border-indigo-200 transition-colors"
+                                            title="Add new Job Title"
+                                        >
+                                            <Plus size={20} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div>
@@ -1094,13 +1145,28 @@ export const ProfileManager: React.FC<ProfileManagerProps> = ({ profiles, onAdd,
 
                                 <div className="pt-4 border-t border-slate-100">
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Footer Role (Bottom)</label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.footerRoleEn || ''}
-                                        onChange={e => setFormData({...formData, footerRoleEn: e.target.value})}
-                                        placeholder="e.g. Team Leader at Long Hoang Logistics"
-                                        className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                                    />
+                                    <div className="flex gap-2">
+                                        <select 
+                                            value={formData.footerRoleEn || ''}
+                                            onChange={e => setFormData({...formData, footerRoleEn: e.target.value})}
+                                            className="flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white"
+                                        >
+                                            <option value="">-- Select Footer Role --</option>
+                                            {rolesEnList.map((r) => (
+                                                <option key={r} value={r}>{r}</option>
+                                            ))}
+                                            {!rolesEnList.includes(formData.footerRoleEn || '') && formData.footerRoleEn && (
+                                                <option value={formData.footerRoleEn}>{formData.footerRoleEn}</option>
+                                            )}
+                                        </select>
+                                        <button 
+                                            onClick={handleAddCustomRoleEn}
+                                            className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 p-2 rounded-lg border border-indigo-200 transition-colors"
+                                            title="Add new Footer Role"
+                                        >
+                                            <Plus size={20} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
