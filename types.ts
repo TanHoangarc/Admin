@@ -58,4 +58,12 @@ export interface VisitData {
   interactions: number;
 }
 
+export type UserRole = 'admin' | 'user';
+
+export interface AuthUser {
+  username: string;
+  role: UserRole;
+  isLoggedIn: boolean;
+}
+
 export const BASE_URL_PREFIX = "https://tanhoangarc.github.io/";
