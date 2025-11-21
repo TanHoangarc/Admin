@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ShieldCheck, User, Lock, LogIn, UserPlus } from 'lucide-react';
 import { login, signup } from '../services/authService';
@@ -81,7 +82,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                                    placeholder="Enter username"
+                                    placeholder="Nhập tài khoản hoặc SĐT"
                                 />
                             </div>
                         </div>
@@ -98,7 +99,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                                    placeholder="Enter password"
+                                    placeholder="Nhập mật khẩu"
                                 />
                             </div>
                         </div>
@@ -119,17 +120,29 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                         )}
 
                         <button 
-                            type="submit"
-                            className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
+                            type="submit" 
+                            className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-200"
                         >
-                            {isLoginView ? <><LogIn size={18} /> Đăng Nhập</> : <><UserPlus size={18} /> Đăng Ký</>}
+                            {isLoginView ? (
+                                <>
+                                    <LogIn size={20} /> Đăng Nhập
+                                </>
+                            ) : (
+                                <>
+                                    <UserPlus size={20} /> Đăng Ký
+                                </>
+                            )}
                         </button>
                     </form>
 
                     <div className="mt-6 text-center">
                         <button 
-                            onClick={() => { setIsLoginView(!isLoginView); setError(''); setSuccessMsg(''); }}
-                            className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                            onClick={() => {
+                                setIsLoginView(!isLoginView);
+                                setError('');
+                                setSuccessMsg('');
+                            }}
+                            className="text-sm text-indigo-600 font-medium hover:underline"
                         >
                             {isLoginView ? 'Chưa có tài khoản? Đăng ký ngay' : 'Đã có tài khoản? Đăng nhập'}
                         </button>
