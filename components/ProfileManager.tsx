@@ -34,7 +34,7 @@ const DEFAULT_SOCIAL_URLS: Record<string, string> = {
     zalo: "https://zalo.me/",
     email: "mailto:@longhoanglogistics.com",
     map: "https://maps.app.goo.gl/ZSVFYotTCuGWNQmW8",
-    website: "https://www.longhoanglogistics.com"
+    website: "https://www.longhoanglogistics.com",
     profile: "https://drive.google.com/file/d/1wyPCBaCLTiUx3aWMwIX3X1WryfnTL-Lp/view?usp=drive_link"
 };
 
