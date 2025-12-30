@@ -58,12 +58,13 @@ export interface VisitData {
   interactions: number;
 }
 
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'admin' | 'sales' | 'account';
 
 export interface AuthUser {
   username: string;
   role: UserRole;
   isLoggedIn: boolean;
+  allowedProfileIds?: string[]; // IDs of profiles this user can access (for Sales)
 }
 
 export const BASE_URL_PREFIX = "https://tanhoangarc.github.io/";
