@@ -10,11 +10,11 @@ const SYSTEM_ACCOUNTS = [
     { username: 'tanhoangarc', password: 'Hoang@2609#', role: 'admin' as UserRole },
     { username: 'admin', password: 'admin123', role: 'admin' as UserRole },
     // Sales Accounts (assigned specific profiles)
-    { username: 'sales_andy', password: '123', role: 'sales' as UserRole, allowedProfileIds: ['1'] }, 
-    { username: 'sales_jaden', password: '123', role: 'sales' as UserRole, allowedProfileIds: ['2'] },
-    { username: 'sales_all', password: '123', role: 'sales' as UserRole, allowedProfileIds: ['1', '2', '3'] },
+    { username: 'sales_andy', password: '123456', role: 'sales' as UserRole, allowedProfileIds: ['1'] }, 
+    { username: 'sales_jaden', password: '123456', role: 'sales' as UserRole, allowedProfileIds: ['2'] },
+    { username: 'sales_all', password: '123456', role: 'sales' as UserRole, allowedProfileIds: ['1', '2', '3'] },
     // Account Role (No access to Manage Pages)
-    { username: 'account_user', password: '123', role: 'account' as UserRole }
+    { username: 'account', password: 'Lh@1401', role: 'account' as UserRole }
 ];
 
 export const getStoredUser = (): AuthUser | null => {
