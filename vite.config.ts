@@ -1,3 +1,4 @@
+
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
@@ -8,8 +9,8 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
-    // Robustly resolve API Key from various sources
-    const apiKey = env.GEMINI_API_KEY || env.API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
+    // Robustly resolve API Key from various sources, fallback to empty string
+    const apiKey = env.GEMINI_API_KEY || env.API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || '';
 
     return {
       server: {
@@ -19,7 +20,6 @@ export default defineConfig(({ mode }) => {
       plugins: [react()],
       define: {
         'process.env.API_KEY': JSON.stringify(apiKey),
-        // Fallback or explicit definition if needed elsewhere
         'process.env.GEMINI_API_KEY': JSON.stringify(apiKey)
       },
       resolve: {

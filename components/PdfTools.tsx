@@ -866,8 +866,14 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
         } 
         else if (type === 'ai') {
              try {
+                // Check if API key is present
+                const apiKey = process.env.API_KEY;
+                if (!apiKey || apiKey === '') {
+                    throw new Error("API Key not found. Please set GEMINI_API_KEY.");
+                }
+
                 const base64Image = tempCanvas.toDataURL('image/png').split(',')[1];
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const ai = new GoogleGenAI({ apiKey: apiKey });
                 const response = await ai.models.generateContent({
                     model: "gemini-2.5-flash-image",
                     contents: {
@@ -901,10 +907,14 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
                     }
                 }
                 
-                if (!foundImage) alert("AI processed the request but did not return an image.");
-             } catch (e) {
-                 console.error(e);
-                 alert("AI Processing Failed. Check API Key or Quota.");
+                if (!foundImage) throw new Error("AI response did not contain an image.");
+             } catch (e: any) {
+                 console.error("AI Error:", e);
+                 // Friendly error messages
+                 let msg = e.message || e.toString();
+                 if (msg.includes("403")) msg = "API Key Invalid or Quota Exceeded (403).";
+                 if (msg.includes("404")) msg = "Model not found (404). Check if 'gemini-2.5-flash-image' is supported.";
+                 alert(`AI Processing Failed: ${msg}`);
              }
         }
         else {
