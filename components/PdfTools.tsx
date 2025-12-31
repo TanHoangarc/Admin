@@ -866,10 +866,14 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
         } 
         else if (type === 'ai') {
              try {
-                // Check if API key is present
-                const apiKey = process.env.API_KEY;
+                // Check multiple sources for the key
+                // 1. injected process.env.API_KEY (from vite config define)
+                // 2. import.meta.env.VITE_GEMINI_API_KEY (Vite default for .env)
+                // 3. import.meta.env.VITE_API_KEY
+                const apiKey = process.env.API_KEY || ((import.meta as any).env && (import.meta as any).env.VITE_GEMINI_API_KEY) || ((import.meta as any).env && (import.meta as any).env.VITE_API_KEY) || '';
+                
                 if (!apiKey || apiKey === '') {
-                    throw new Error("API Key not found. Please set GEMINI_API_KEY.");
+                    throw new Error("Missing API Key. In Vercel Project Settings, add a new Environment Variable named 'GEMINI_API_KEY' (or 'VITE_GEMINI_API_KEY') with your Google AI Studio key.");
                 }
 
                 const base64Image = tempCanvas.toDataURL('image/png').split(',')[1];
@@ -1090,70 +1094,78 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
     );
 };
 
-// --- MAIN COMPONENT ---
-
 export const PdfTools: React.FC = () => {
-  const [activeTool, setActiveTool] = useState<ToolType>('split');
-  
+  const [activeTool, setActiveTool] = useState<ToolType | null>(null);
+  // Shared state for stamps library (for StampTool and ExtractStampTool)
   const [stamps, setStamps] = useState<StampItem[]>(() => {
-      const saved = localStorage.getItem(STORAGE_KEY_STAMPS);
-      return saved ? JSON.parse(saved) : [];
+    const saved = localStorage.getItem(STORAGE_KEY_STAMPS);
+    return saved ? JSON.parse(saved) : [];
   });
 
   useEffect(() => {
-      localStorage.setItem(STORAGE_KEY_STAMPS, JSON.stringify(stamps));
+    localStorage.setItem(STORAGE_KEY_STAMPS, JSON.stringify(stamps));
   }, [stamps]);
 
-  const renderTool = () => {
-    switch (activeTool) {
-      case 'split': return <SplitTool />;
-      case 'compress': return <CompressTool />;
-      case 'merge': return <MergeTool />;
-      case 'images_to_pdf': return <ImagesToPdfTool />;
-      case 'unlock': return <UnlockTool />;
-      case 'edit': return <EditTool />;
-      case 'stamp': return <StampTool stamps={stamps} setStamps={setStamps} />;
-      case 'extract': return <ExtractStampTool setStamps={setStamps} />;
-      default: return <div>Select a tool</div>;
-    }
-  };
-
-  const menuItems: {id: ToolType, label: string, icon: any}[] = [
-      { id: 'split', label: 'Tách PDF', icon: Scissors },
-      { id: 'compress', label: 'Giảm Dung Lượng', icon: Minimize2 },
-      { id: 'merge', label: 'Ghép PDF', icon: Merge },
-      { id: 'images_to_pdf', label: 'Ảnh sang PDF', icon: Image },
-      { id: 'unlock', label: 'Mở Khóa PDF', icon: Unlock },
-      { id: 'edit', label: 'Chỉnh Sửa PDF', icon: Edit },
-      { id: 'stamp', label: 'Đóng Dấu', icon: Stamp },
-      { id: 'extract', label: 'Tách Con Dấu (AI)', icon: Crop },
+  const tools = [
+    { id: 'split', name: 'Tách PDF', icon: Scissors, desc: 'Chia nhỏ file PDF thành nhiều trang.' },
+    { id: 'merge', name: 'Ghép PDF', icon: Merge, desc: 'Gộp nhiều file PDF thành một.' },
+    { id: 'compress', name: 'Nén PDF', icon: Minimize2, desc: 'Giảm dung lượng file PDF.' },
+    { id: 'images_to_pdf', name: 'Ảnh sang PDF', icon: Image, desc: 'Chuyển đổi ảnh JPG/PNG sang PDF.' },
+    { id: 'unlock', name: 'Mở Khóa', icon: Unlock, desc: 'Xóa mật khẩu bảo vệ PDF.' },
+    { id: 'edit', name: 'Thêm Chữ', icon: Edit, desc: 'Chèn văn bản vào trang PDF.' },
+    { id: 'stamp', name: 'Đóng Dấu', icon: Stamp, desc: 'Chèn ảnh/logo/con dấu vào PDF.' },
+    { id: 'extract', name: 'Tách Con Dấu', icon: Crop, desc: 'Cắt và xử lý con dấu từ văn bản scan.' },
   ];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-h-[600px] flex flex-col md:flex-row">
-      <div className="w-full md:w-64 bg-slate-50 border-r border-slate-200 p-4">
-        <h2 className="text-lg font-bold text-slate-800 mb-4 px-2">PDF Tools</h2>
-        <div className="space-y-1">
-            {menuItems.map(item => (
-                <button
-                    key={item.id}
-                    onClick={() => setActiveTool(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                        activeTool === item.id 
-                        ? 'bg-indigo-600 text-white' 
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                >
-                    <item.icon size={18} />
-                    {item.label}
-                </button>
-            ))}
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex items-center gap-4">
+        {activeTool && (
+          <button 
+            onClick={() => setActiveTool(null)}
+            className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+          >
+            <ChevronLeft size={24} />
+          </button>
+        )}
+        <div>
+           <h2 className="text-2xl font-bold text-slate-900">
+             {activeTool ? tools.find(t => t.id === activeTool)?.name : 'PDF Tools'}
+           </h2>
+           <p className="text-slate-500">
+             {activeTool ? tools.find(t => t.id === activeTool)?.desc : 'Bộ công cụ xử lý PDF nhanh chóng và tiện lợi.'}
+           </p>
         </div>
       </div>
 
-      <div className="flex-1 p-6 md:p-8 overflow-y-auto">
-        {renderTool()}
-      </div>
+      {!activeTool ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {tools.map((tool) => (
+            <button
+              key={tool.id}
+              onClick={() => setActiveTool(tool.id as ToolType)}
+              className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all text-left group"
+            >
+              <div className="w-12 h-12 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 mb-4 group-hover:scale-110 transition-transform">
+                <tool.icon size={24} />
+              </div>
+              <h3 className="font-bold text-slate-900 mb-1">{tool.name}</h3>
+              <p className="text-sm text-slate-500">{tool.desc}</p>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm min-h-[500px]">
+           {activeTool === 'split' && <SplitTool />}
+           {activeTool === 'merge' && <MergeTool />}
+           {activeTool === 'compress' && <CompressTool />}
+           {activeTool === 'images_to_pdf' && <ImagesToPdfTool />}
+           {activeTool === 'unlock' && <UnlockTool />}
+           {activeTool === 'edit' && <EditTool />}
+           {activeTool === 'stamp' && <StampTool stamps={stamps} setStamps={setStamps} />}
+           {activeTool === 'extract' && <ExtractStampTool setStamps={setStamps} />}
+        </div>
+      )}
     </div>
   );
 };
