@@ -5,7 +5,8 @@ import {
   Stamp, Upload, Download, Trash2, MoveUp, MoveDown, 
   Plus, Check, X, Loader, ChevronLeft, ChevronRight, MousePointer,
   Crop, Layers, Wand2, RefreshCw, Eraser, Palette, Droplets, Split,
-  Files, Pencil, Save, Cloud, FolderOpen
+  Files, Pencil, Save, Cloud, FolderOpen, AlertTriangle, HelpCircle,
+  ArrowLeft, ShieldCheck
 } from 'lucide-react';
 import { PDFDocument, rgb } from 'pdf-lib';
 import JSZip from 'jszip';
@@ -592,7 +593,6 @@ const EditTool = () => {
 const StampTool = ({ stamps, setStamps }: { stamps: StampItem[], setStamps: any }) => {
     const [file, setFile] = useState<File | null>(null);
     const [selectedStamp, setSelectedStamp] = useState<string | null>(null);
-    const [newStampName, setNewStampName] = useState('');
     const [isAdding, setIsAdding] = useState(false);
     const [page, setPage] = useState(1);
     const [position, setPosition] = useState({ x: 100, y: 100 }); 
@@ -609,21 +609,29 @@ const StampTool = ({ stamps, setStamps }: { stamps: StampItem[], setStamps: any 
     };
 
     const handleAddStamp = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const f = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = () => {
-                if (typeof reader.result === 'string') {
-                    setStamps((prev: any) => [...prev, {
-                        id: Date.now().toString(),
-                        name: newStampName || f.name,
-                        url: reader.result
-                    }]);
-                    setNewStampName('');
-                    setIsAdding(false);
-                }
-            };
-            reader.readAsDataURL(f);
+        if (e.target.files && e.target.files.length > 0) {
+            const files = Array.from(e.target.files);
+            const newStampsPromises = files.map(file => {
+                return new Promise<StampItem>((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        if (typeof reader.result === 'string') {
+                            resolve({
+                                id: Date.now().toString() + Math.random().toString(), // Ensure unique ID
+                                name: file.name.split('.')[0], // Use filename as default name
+                                url: reader.result,
+                                created: Date.now()
+                            });
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            Promise.all(newStampsPromises).then(newItems => {
+                setStamps((prev: any) => [...prev, ...newItems]);
+                setIsAdding(false);
+            });
         }
     };
 
@@ -649,51 +657,90 @@ const StampTool = ({ stamps, setStamps }: { stamps: StampItem[], setStamps: any 
             const pdfBuffer = await file.arrayBuffer();
             const pdfDoc = await PDFDocument.load(pdfBuffer);
             const totalPdfPages = pdfDoc.getPageCount();
+            
+            // Define visual base width matching the preview CSS (200px)
+            const BASE_VISUAL_WIDTH = 200; 
+
             if (stampType === 'normal') {
                 let imageToEmbed = stampItem.url;
                 let stampImage;
                 if (imageToEmbed.startsWith('data:image/png')) stampImage = await pdfDoc.embedPng(imageToEmbed);
                 else stampImage = await pdfDoc.embedJpg(imageToEmbed);
+                
                 const targetPage = pdfDoc.getPages()[page - 1];
                 if (!targetPage) return;
+                
                 const { width, height } = targetPage.getSize();
-                const dims = stampImage.scale(scale);
+                const imgAspect = stampImage.width / stampImage.height;
+                
+                // Calculate Size based on WYSIWYG
+                let pdfW, pdfH;
+                const visualWidth = BASE_VISUAL_WIDTH * scale;
+                
+                if (viewSize.width > 0) {
+                    // WYSIWYG: Scale based on ratio of page width to view width
+                    pdfW = visualWidth * (width / viewSize.width);
+                } else {
+                    // Fallback: 1px = 1pt (if no user interaction)
+                    pdfW = visualWidth; 
+                }
+                pdfH = pdfW / imgAspect;
+
+                // Calculate Position
                 let pdfX = 0, pdfY = 0;
                 if (viewSize.width > 0) {
                     const clickX = (position.x / viewSize.width) * width;
                     const clickY = height - ((position.y / viewSize.height) * height);
-                    pdfX = clickX - (dims.width / 2);
-                    pdfY = clickY - (dims.height / 2);
+                    pdfX = clickX - (pdfW / 2);
+                    pdfY = clickY - (pdfH / 2);
                 } else {
-                    pdfX = width - dims.width - 20;
+                    pdfX = width - pdfW - 20;
                     pdfY = 20;
                 }
-                targetPage.drawImage(stampImage, { x: pdfX, y: pdfY, width: dims.width, height: dims.height, opacity: opacity, });
+                
+                targetPage.drawImage(stampImage, { x: pdfX, y: pdfY, width: pdfW, height: pdfH, opacity: opacity });
             } else {
+                // Fanfold logic
                 const start = Math.max(1, fanfoldStart);
                 const end = Math.min(totalPdfPages, fanfoldEnd);
                 const totalParts = end - start + 1;
                 if (totalParts < 2) { alert("Chế độ giáp lai cần ít nhất 2 trang."); return; }
+                
                 for (let i = 0; i < totalParts; i++) {
                     const pageIndex = start + i - 1;
                     const targetPage = pdfDoc.getPages()[pageIndex];
+                    
                     const sliceDataUrl = await cropImageSlice(stampItem.url, i, totalParts);
                     let sliceImage;
                     if (sliceDataUrl.startsWith('data:image/png')) sliceImage = await pdfDoc.embedPng(sliceDataUrl);
                     else sliceImage = await pdfDoc.embedJpg(sliceDataUrl);
+                    
                     const { width, height } = targetPage.getSize();
-                    const sliceDims = sliceImage.scale(scale);
+                    const sliceAspect = sliceImage.width / sliceImage.height;
+
+                    // Calculate Size
+                    let pdfW, pdfH;
+                    const visualSliceWidth = (BASE_VISUAL_WIDTH * scale) / totalParts;
+                    
+                    if (viewSize.width > 0) {
+                        pdfW = visualSliceWidth * (width / viewSize.width);
+                    } else {
+                        pdfW = visualSliceWidth;
+                    }
+                    pdfH = pdfW / sliceAspect;
+
                     let pdfX = 0, pdfY = 0;
                     if (viewSize.width > 0) {
                         const clickX = (position.x / viewSize.width) * width;
                         const clickY = height - ((position.y / viewSize.height) * height);
-                        pdfX = clickX - (sliceDims.width / 2);
-                        pdfY = clickY - (sliceDims.height / 2);
+                        pdfX = clickX - (pdfW / 2);
+                        pdfY = clickY - (pdfH / 2);
                     } else {
-                        pdfX = width - sliceDims.width;
-                        pdfY = height / 2 - (sliceDims.height / 2);
+                        pdfX = width - pdfW;
+                        pdfY = height / 2 - (pdfH / 2);
                     }
-                    targetPage.drawImage(sliceImage, { x: pdfX, y: pdfY, width: sliceDims.width, height: sliceDims.height, opacity: opacity, });
+                    
+                    targetPage.drawImage(sliceImage, { x: pdfX, y: pdfY, width: pdfW, height: pdfH, opacity: opacity });
                 }
             }
             const pdfBytes = await pdfDoc.save();
@@ -713,9 +760,10 @@ const StampTool = ({ stamps, setStamps }: { stamps: StampItem[], setStamps: any 
         return { width: `${totalParts * 100}%`, marginLeft: `-${partIndex * 100}%`, maxWidth: 'none' };
     };
     const getPreviewContainerWidth = () => {
-        if (stampType === 'normal') return `${100 * scale}px`;
+        const BASE_WIDTH = 200; // Increased base width for better default size
+        if (stampType === 'normal') return `${BASE_WIDTH * scale}px`;
         const totalParts = fanfoldEnd - fanfoldStart + 1;
-        return `${(100 * scale) / totalParts}px`;
+        return `${(BASE_WIDTH * scale) / totalParts}px`;
     };
 
     return (
@@ -723,7 +771,25 @@ const StampTool = ({ stamps, setStamps }: { stamps: StampItem[], setStamps: any 
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Stamp className="text-indigo-600"/> Đóng Dấu (Watermark)</h3>
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
                 <div className="flex justify-between items-center mb-4"><h4 className="font-semibold text-sm uppercase text-slate-500 flex items-center gap-2"><Cloud size={16} className="text-indigo-500" /> Thư viện: SignLH &gt; Sign</h4><button onClick={() => setIsAdding(!isAdding)} className="text-indigo-600 text-sm font-medium hover:underline flex items-center gap-1"><Plus size={16}/> Thêm mới</button></div>
-                {isAdding && (<div className="bg-white p-3 rounded-lg border border-indigo-100 mb-4 animate-in fade-in"><input type="text" placeholder="Tên con dấu (vd: Logo Cty)" value={newStampName} onChange={e => setNewStampName(e.target.value)} className="block w-full text-sm border-slate-200 rounded-md mb-2 px-2 py-1 border"/><input type="file" accept="image/png, image/jpeg" onChange={handleAddStamp} className="block w-full text-xs text-slate-500"/><p className="text-[10px] text-slate-400 mt-2 italic flex items-center gap-1"><Cloud size={10}/> Đang đồng bộ với SignLH/Sign...</p></div>)}
+                {isAdding && (
+                    <div className="bg-white p-4 rounded-lg border border-indigo-100 mb-4 animate-in fade-in">
+                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-indigo-300 border-dashed rounded-lg cursor-pointer bg-indigo-50 hover:bg-indigo-100 transition-colors">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <Cloud className="w-8 h-8 text-indigo-500 mb-2" />
+                                <p className="mb-2 text-sm text-indigo-600"><span className="font-semibold">Click để chọn ảnh</span> (Chọn nhiều ảnh cùng lúc)</p>
+                                <p className="text-xs text-indigo-400">PNG, JPG</p>
+                            </div>
+                            <input 
+                                type="file" 
+                                accept="image/png, image/jpeg" 
+                                multiple 
+                                onChange={handleAddStamp} 
+                                className="hidden" 
+                            />
+                        </label>
+                        <p className="text-[10px] text-slate-400 mt-2 italic text-center">Đang đồng bộ với SignLH/Sign...</p>
+                    </div>
+                )}
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">{stamps.map(stamp => (<div key={stamp.id} onClick={() => setSelectedStamp(stamp.id)} className={`relative border-2 rounded-lg p-2 cursor-pointer transition-all hover:bg-white group ${selectedStamp === stamp.id ? 'border-indigo-500 bg-indigo-50' : 'border-transparent bg-white shadow-sm'}`}><img src={stamp.url} className="w-full h-16 object-contain mb-1" /><p className="text-[10px] text-center font-medium truncate">{stamp.name}</p><div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 rounded-md p-0.5 backdrop-blur-sm shadow-sm"><button onClick={(e) => { e.stopPropagation(); handleRenameStamp(stamp.id, stamp.name); }} className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition" title="Đổi tên"><Pencil size={12}/></button><button onClick={(e) => { e.stopPropagation(); handleDeleteStamp(stamp.id); }} className="p-1 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition" title="Xóa"><Trash2 size={12}/></button></div></div>))}{stamps.length === 0 && <p className="col-span-5 text-center text-sm text-slate-400 py-4 flex flex-col items-center gap-2"><FolderOpen size={24}/> Thư mục SignLH rỗng.</p>}</div>
             </div>
             <div className="border-t border-slate-100 pt-6">
@@ -751,8 +817,9 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [colorMode, setColorMode] = useState<'original'|'red'|'blue'>('original');
     const [saturation, setSaturation] = useState(1);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-    useEffect(() => { setSelection(null); setBaseImage(null); setResultImage(null); }, [page, file]);
+    useEffect(() => { setSelection(null); setBaseImage(null); setResultImage(null); setErrorMsg(null); }, [page, file]);
 
     useEffect(() => {
         if (!baseImage) return;
@@ -790,6 +857,7 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
         setIsSelecting(true);
         startPos.current = { x, y };
         setSelection({ x, y, w: 0, h: 0 });
+        setErrorMsg(null);
     };
 
     const handleMouseMove = (e: React.MouseEvent) => {
@@ -819,6 +887,7 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
     const processCrop = async (type: 'original' | 'filter' | 'ai') => {
         if (!selection || !canvasWrapperRef.current) return;
         setIsProcessing(true);
+        setErrorMsg(null);
 
         const canvas = canvasWrapperRef.current.querySelector('canvas');
         if (!canvas) return;
@@ -832,7 +901,7 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
         const cropH = selection.h * scaleY;
 
         if (cropW < 5 || cropH < 5) {
-             alert("Vùng chọn quá nhỏ.");
+             setErrorMsg("Vùng chọn quá nhỏ.");
              setIsProcessing(false);
              return;
         }
@@ -866,19 +935,11 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
         } 
         else if (type === 'ai') {
              try {
-                // Determine API Key with robust fallbacks
-                // 1. Check runtime Vite env (requires VITE_ prefix or config exposure)
-                // 2. Check build-time injected process.env (from vite.config.ts define)
+                // Must use process.env.API_KEY directly as per coding guidelines
+                const apiKey = process.env.API_KEY;
                 
-                // Note: On Vercel, if you change settings, you MUST Redeploy for build-time keys to update.
-                const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || 
-                               (import.meta as any).env?.VITE_API_KEY || 
-                               process.env.GEMINI_API_KEY || 
-                               process.env.API_KEY || 
-                               '';
-                
-                if (!apiKey || apiKey === '') {
-                    throw new Error("API Key Missing. \n\n1. Go to Vercel Project Settings > Environment Variables.\n2. Add 'VITE_GEMINI_API_KEY' with your key.\n3. IMPORTANT: Go to Deployments and Redeploy to apply changes.");
+                if (!apiKey) {
+                    throw new Error("KEY_MISSING");
                 }
 
                 const base64Image = tempCanvas.toDataURL('image/png').split(',')[1];
@@ -919,11 +980,41 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
                 if (!foundImage) throw new Error("AI response did not contain an image.");
              } catch (e: any) {
                  console.error("AI Error:", e);
-                 // Friendly error messages
-                 let msg = e.message || e.toString();
-                 if (msg.includes("403")) msg = "API Key Invalid or Quota Exceeded (403).";
-                 if (msg.includes("404")) msg = "Model not found (404). Check if 'gemini-2.5-flash-image' is supported.";
-                 alert(`AI Processing Failed: ${msg}`);
+                 setIsProcessing(false); // Ensure loading stops
+                 
+                 if (e.message === 'KEY_MISSING') {
+                     setErrorMsg("API Key Missing");
+                 } else {
+                     let msg = e.message || e.toString();
+                     
+                     // Check for 429 specifically in the string
+                     if (msg.includes("429") || (msg.includes("quota") && msg.includes("exceeded"))) {
+                         msg = "Hết hạn mức sử dụng (429). Bạn đang dùng gói miễn phí của Google, hệ thống bị giới hạn tốc độ. Vui lòng đợi 1-2 phút rồi thử lại.";
+                     }
+                     else if (msg.includes("403")) {
+                         msg = "API Key không hợp lệ (403). Kiểm tra lại key trong Vercel Settings.";
+                     }
+                     else if (msg.includes("404")) {
+                         msg = "Model không tồn tại (404).";
+                     }
+                     // Try to parse cleaner message from JSON if it looks like JSON
+                     else if (msg.includes('{"error":')) {
+                         try {
+                             // Attempt to extract json object
+                             const match = msg.match(/\{"error":.*\}/);
+                             if (match) {
+                                 const parsed = JSON.parse(match[0]);
+                                 if (parsed.error?.message) {
+                                     msg = parsed.error.message;
+                                 }
+                             }
+                         } catch (err) {
+                             // ignore parsing error
+                         }
+                     }
+
+                     setErrorMsg(`Lỗi AI: ${msg}`);
+                 }
              }
         }
         else {
@@ -1000,6 +1091,26 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
                              <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                                 <Layers size={18}/> Xử lý vùng chọn
                              </h4>
+                             
+                             {errorMsg && (
+                                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 animate-in fade-in">
+                                     <div className="flex items-center gap-2 font-bold mb-1">
+                                         <AlertTriangle size={16} /> Lỗi xử lý
+                                     </div>
+                                     <p className="mb-2">{errorMsg}</p>
+                                     {errorMsg === "API Key Missing" && (
+                                         <div className="bg-white p-2 rounded border border-red-100 text-xs text-slate-600">
+                                             <strong>Cách khắc phục:</strong>
+                                             <ol className="list-decimal pl-4 mt-1 space-y-1">
+                                                 <li>Vào Vercel Project Settings > Environment Variables.</li>
+                                                 <li>Đảm bảo đã thêm <code>VITE_GEMINI_API_KEY</code>.</li>
+                                                 <li className="text-red-600 font-bold">Quan trọng: Vào tab Deployments, chọn Redeploy để cập nhật Key mới vào ứng dụng.</li>
+                                             </ol>
+                                         </div>
+                                     )}
+                                 </div>
+                             )}
+
                              <div className="space-y-3">
                                  <button 
                                     onClick={() => processCrop('original')}
@@ -1100,77 +1211,83 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
 };
 
 export const PdfTools: React.FC = () => {
-  const [activeTool, setActiveTool] = useState<ToolType | null>(null);
-  // Shared state for stamps library (for StampTool and ExtractStampTool)
-  const [stamps, setStamps] = useState<StampItem[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_STAMPS);
-    return saved ? JSON.parse(saved) : [];
-  });
+    const [activeTool, setActiveTool] = useState<ToolType | null>(null);
+    const [stamps, setStamps] = useState<StampItem[]>(() => {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY_STAMPS);
+            return stored ? JSON.parse(stored) : [];
+        } catch (e) {
+            return [];
+        }
+    });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_STAMPS, JSON.stringify(stamps));
-  }, [stamps]);
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY_STAMPS, JSON.stringify(stamps));
+    }, [stamps]);
 
-  const tools = [
-    { id: 'split', name: 'Tách PDF', icon: Scissors, desc: 'Chia nhỏ file PDF thành nhiều trang.' },
-    { id: 'merge', name: 'Ghép PDF', icon: Merge, desc: 'Gộp nhiều file PDF thành một.' },
-    { id: 'compress', name: 'Nén PDF', icon: Minimize2, desc: 'Giảm dung lượng file PDF.' },
-    { id: 'images_to_pdf', name: 'Ảnh sang PDF', icon: Image, desc: 'Chuyển đổi ảnh JPG/PNG sang PDF.' },
-    { id: 'unlock', name: 'Mở Khóa', icon: Unlock, desc: 'Xóa mật khẩu bảo vệ PDF.' },
-    { id: 'edit', name: 'Thêm Chữ', icon: Edit, desc: 'Chèn văn bản vào trang PDF.' },
-    { id: 'stamp', name: 'Đóng Dấu', icon: Stamp, desc: 'Chèn ảnh/logo/con dấu vào PDF.' },
-    { id: 'extract', name: 'Tách Con Dấu', icon: Crop, desc: 'Cắt và xử lý con dấu từ văn bản scan.' },
-  ];
+    const renderTool = () => {
+        switch (activeTool) {
+            case 'split': return <SplitTool />;
+            case 'compress': return <CompressTool />;
+            case 'merge': return <MergeTool />;
+            case 'images_to_pdf': return <ImagesToPdfTool />;
+            case 'unlock': return <UnlockTool />;
+            case 'edit': return <EditTool />;
+            case 'stamp': return <StampTool stamps={stamps} setStamps={setStamps} />;
+            case 'extract': return <ExtractStampTool setStamps={setStamps} />;
+            default: return null;
+        }
+    };
 
-  return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center gap-4">
-        {activeTool && (
-          <button 
-            onClick={() => setActiveTool(null)}
-            className="p-2 hover:bg-slate-200 rounded-full transition-colors"
-          >
-            <ChevronLeft size={24} />
-          </button>
-        )}
-        <div>
-           <h2 className="text-2xl font-bold text-slate-900">
-             {activeTool ? tools.find(t => t.id === activeTool)?.name : 'PDF Tools'}
-           </h2>
-           <p className="text-slate-500">
-             {activeTool ? tools.find(t => t.id === activeTool)?.desc : 'Bộ công cụ xử lý PDF nhanh chóng và tiện lợi.'}
-           </p>
+    if (activeTool) {
+        return (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                <button 
+                    onClick={() => setActiveTool(null)}
+                    className="mb-4 flex items-center gap-2 text-slate-500 hover:text-indigo-600 transition-colors font-medium"
+                >
+                    <ArrowLeft size={20} /> Quay lại danh sách công cụ
+                </button>
+                <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm min-h-[600px]">
+                    {renderTool()}
+                </div>
+            </div>
+        );
+    }
+
+    const tools = [
+        { id: 'split', name: 'Tách PDF', icon: Scissors, desc: 'Tách file PDF thành nhiều trang nhỏ, hoặc theo range.' },
+        { id: 'merge', name: 'Ghép PDF', icon: Merge, desc: 'Gộp nhiều file PDF thành một file duy nhất.' },
+        { id: 'compress', name: 'Nén PDF', icon: Minimize2, desc: 'Giảm dung lượng file PDF để dễ chia sẻ.' },
+        { id: 'images_to_pdf', name: 'Ảnh sang PDF', icon: Image, desc: 'Chuyển đổi file ảnh (JPG, PNG) sang PDF.' },
+        { id: 'unlock', name: 'Mở Khóa PDF', icon: Unlock, desc: 'Xóa mật khẩu bảo vệ khỏi file PDF (nếu biết pass).' },
+        { id: 'edit', name: 'Chỉnh Sửa PDF', icon: Edit, desc: 'Thêm văn bản, chú thích vào trang PDF.' },
+        { id: 'stamp', name: 'Đóng Dấu (SignLH)', icon: Stamp, desc: 'Chèn chữ ký, mộc, logo hoặc giáp lai nhiều trang.' },
+        { id: 'extract', name: 'Tách Con Dấu (AI)', icon: Crop, desc: 'Dùng AI để tách và phục hồi con dấu từ văn bản scan.' },
+    ];
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div>
+                <h2 className="text-2xl font-bold text-slate-900">PDF Tools</h2>
+                <p className="text-slate-500">Bộ công cụ xử lý PDF tiện lợi - Xử lý ngay trên trình duyệt, bảo mật tuyệt đối.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {tools.map((tool) => (
+                    <button
+                        key={tool.id}
+                        onClick={() => setActiveTool(tool.id as ToolType)}
+                        className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all text-left group h-full flex flex-col"
+                    >
+                        <div className="w-12 h-12 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 mb-4 group-hover:scale-110 transition-transform">
+                            <tool.icon size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">{tool.name}</h3>
+                        <p className="text-slate-500 text-sm flex-1">{tool.desc}</p>
+                    </button>
+                ))}
+            </div>
         </div>
-      </div>
-
-      {!activeTool ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {tools.map((tool) => (
-            <button
-              key={tool.id}
-              onClick={() => setActiveTool(tool.id as ToolType)}
-              className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all text-left group"
-            >
-              <div className="w-12 h-12 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 mb-4 group-hover:scale-110 transition-transform">
-                <tool.icon size={24} />
-              </div>
-              <h3 className="font-bold text-slate-900 mb-1">{tool.name}</h3>
-              <p className="text-sm text-slate-500">{tool.desc}</p>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm min-h-[500px]">
-           {activeTool === 'split' && <SplitTool />}
-           {activeTool === 'merge' && <MergeTool />}
-           {activeTool === 'compress' && <CompressTool />}
-           {activeTool === 'images_to_pdf' && <ImagesToPdfTool />}
-           {activeTool === 'unlock' && <UnlockTool />}
-           {activeTool === 'edit' && <EditTool />}
-           {activeTool === 'stamp' && <StampTool stamps={stamps} setStamps={setStamps} />}
-           {activeTool === 'extract' && <ExtractStampTool setStamps={setStamps} />}
-        </div>
-      )}
-    </div>
-  );
+    );
 };

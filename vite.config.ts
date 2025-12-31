@@ -10,27 +10,26 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(({ mode }) => {
     // Load env file based on `mode` in the current working directory.
     // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
-    const env = loadEnv(mode, process.cwd(), '');
+    const env = loadEnv(mode, (process as any).cwd(), '');
     
-    // Resolution Order:
-    // 1. VITE_GEMINI_API_KEY (Explicitly allowed for frontend)
-    // 2. GEMINI_API_KEY (Backend/System var)
-    // 3. process.env vars (Vercel system vars during build)
+    // Priority order: 
+    // 1. VITE_GEMINI_API_KEY (Vite specific - Preferred)
+    // 2. GEMINI_API_KEY (Generic)
+    // 3. process.env (System Env Vars)
     const apiKey = 
         env.VITE_GEMINI_API_KEY || 
-        env.GEMINI_API_KEY || 
-        env.VITE_API_KEY || 
-        env.API_KEY || 
         process.env.VITE_GEMINI_API_KEY ||
-        process.env.GEMINI_API_KEY || 
-        process.env.API_KEY || 
+        env.GEMINI_API_KEY || 
+        process.env.GEMINI_API_KEY ||
+        env.VITE_API_KEY || 
+        process.env.VITE_API_KEY ||
         '';
 
-    // Log to console during build so you can verify in Vercel Build Logs
+    // Log to console during build so you can verify if key is picked up (will show in terminal)
     if (apiKey) {
-        console.log("✅ API Key successfully resolved and injected.");
+        console.log("✅ API Key successfully resolved for build injection.");
     } else {
-        console.warn("⚠️ API Key NOT found during build. AI features will fail unless VITE_GEMINI_API_KEY is present at runtime.");
+        console.warn("⚠️ API Key NOT found during build. AI features will fail unless provided at runtime via VITE_GEMINI_API_KEY.");
     }
 
     return {
@@ -40,7 +39,7 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        // Inject the resolved key into the code globally
+        // Inject the resolved key into the code
         'process.env.API_KEY': JSON.stringify(apiKey),
         'process.env.GEMINI_API_KEY': JSON.stringify(apiKey)
       },
