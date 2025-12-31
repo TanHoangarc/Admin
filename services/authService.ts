@@ -20,7 +20,34 @@ const initializeAccounts = () => {
         localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(DEFAULT_ACCOUNTS));
         return DEFAULT_ACCOUNTS;
     }
-    return JSON.parse(stored);
+    
+    // Sync critical default accounts (like 'account' user) to localStorage 
+    // to ensure code updates (password changes) are reflected even if storage exists.
+    let accounts = JSON.parse(stored);
+    let hasChanges = false;
+
+    // Specifically sync the 'account' user (id: 5)
+    const targetDefault = DEFAULT_ACCOUNTS.find(a => a.id === '5');
+    if (targetDefault) {
+        const idx = accounts.findIndex((a: any) => a.id === '5');
+        if (idx !== -1) {
+            // Update if changed
+            if (JSON.stringify(accounts[idx]) !== JSON.stringify(targetDefault)) {
+                accounts[idx] = targetDefault;
+                hasChanges = true;
+            }
+        } else {
+            // Add if missing
+            accounts.push(targetDefault);
+            hasChanges = true;
+        }
+    }
+
+    if (hasChanges) {
+        localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
+    }
+
+    return accounts;
 };
 
 export const getStoredUser = (): AuthUser | null => {

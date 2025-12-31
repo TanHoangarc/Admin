@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Scissors, Minimize2, Merge, Image, Unlock, Edit, 
-  Stamp, Upload, Download, FileText, Trash2, MoveUp, MoveDown, 
+  Stamp, Upload, Download, Trash2, MoveUp, MoveDown, 
   Plus, Check, X, Loader, ChevronLeft, ChevronRight, MousePointer,
   Crop, Layers, Wand2, RefreshCw, Eraser, Palette, Droplets, Split,
   Files, Pencil, Save, Cloud, FolderOpen
@@ -124,7 +125,6 @@ const removeWhiteBackground = async (dataUrl: string): Promise<string> => {
 };
 
 // --- Helper: Crop Image Slice (For Fanfold Stamp) ---
-// Splits image into `totalParts` vertical strips and returns the `partIndex`-th strip
 const cropImageSlice = (dataUrl: string, partIndex: number, totalParts: number): Promise<string> => {
     return new Promise((resolve) => {
         const img = new window.Image();
@@ -139,10 +139,7 @@ const cropImageSlice = (dataUrl: string, partIndex: number, totalParts: number):
             const ctx = canvas.getContext('2d');
             if (!ctx) { resolve(dataUrl); return; }
 
-            // Source X: Start at index * sliceWidth
             const sx = sliceW * partIndex;
-            
-            // drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
             ctx.drawImage(img, sx, 0, sliceW, h, 0, 0, sliceW, h);
             resolve(canvas.toDataURL('image/png'));
         };
@@ -151,76 +148,6 @@ const cropImageSlice = (dataUrl: string, partIndex: number, totalParts: number):
 };
 
 const STORAGE_KEY_STAMPS = 'signlh_stamps_library';
-
-export const PdfTools: React.FC = () => {
-  const [activeTool, setActiveTool] = useState<ToolType>('split');
-  
-  // Initialize stamps from LocalStorage (Simulating SignLH folder persistence)
-  const [stamps, setStamps] = useState<StampItem[]>(() => {
-      const saved = localStorage.getItem(STORAGE_KEY_STAMPS);
-      return saved ? JSON.parse(saved) : [];
-  });
-
-  // Persist stamps whenever they change
-  useEffect(() => {
-      localStorage.setItem(STORAGE_KEY_STAMPS, JSON.stringify(stamps));
-  }, [stamps]);
-
-  const renderTool = () => {
-    switch (activeTool) {
-      case 'split': return <SplitTool />;
-      case 'compress': return <CompressTool />;
-      case 'merge': return <MergeTool />;
-      case 'images_to_pdf': return <ImagesToPdfTool />;
-      case 'unlock': return <UnlockTool />;
-      case 'edit': return <EditTool />;
-      case 'stamp': return <StampTool stamps={stamps} setStamps={setStamps} />;
-      case 'extract': return <ExtractStampTool setStamps={setStamps} />;
-      default: return <div>Select a tool</div>;
-    }
-  };
-
-  const menuItems: {id: ToolType, label: string, icon: any}[] = [
-      { id: 'split', label: 'Tách PDF', icon: Scissors },
-      { id: 'compress', label: 'Giảm Dung Lượng', icon: Minimize2 },
-      { id: 'merge', label: 'Ghép PDF', icon: Merge },
-      { id: 'images_to_pdf', label: 'Ảnh sang PDF', icon: Image },
-      { id: 'unlock', label: 'Mở Khóa PDF', icon: Unlock },
-      { id: 'edit', label: 'Chỉnh Sửa PDF', icon: Edit },
-      { id: 'stamp', label: 'Đóng Dấu', icon: Stamp },
-      { id: 'extract', label: 'Tách Con Dấu (AI)', icon: Crop },
-  ];
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-h-[600px] flex flex-col md:flex-row">
-      {/* Sidebar */}
-      <div className="w-full md:w-64 bg-slate-50 border-r border-slate-200 p-4">
-        <h2 className="text-lg font-bold text-slate-800 mb-4 px-2">PDF Tools</h2>
-        <div className="space-y-1">
-            {menuItems.map(item => (
-                <button
-                    key={item.id}
-                    onClick={() => setActiveTool(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                        activeTool === item.id 
-                        ? 'bg-indigo-600 text-white' 
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                >
-                    <item.icon size={18} />
-                    {item.label}
-                </button>
-            ))}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 p-6 md:p-8 overflow-y-auto">
-        {renderTool()}
-      </div>
-    </div>
-  );
-};
 
 // --- Helper: Format Bytes ---
 const formatBytes = (bytes: number, decimals = 2) => {
@@ -239,7 +166,6 @@ interface PdfViewerProps {
     onPageChange: (newPage: number) => void;
     onClick?: (x: number, y: number, viewportWidth: number, viewportHeight: number) => void;
     overlayContent?: React.ReactNode;
-    // Props for tight integration with selection/tools
     containerRef?: React.RefObject<HTMLDivElement>;
     onMouseDown?: (e: React.MouseEvent) => void;
     onMouseMove?: (e: React.MouseEvent) => void;
@@ -308,7 +234,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
             canvas.height = viewport.height;
             canvas.width = viewport.width;
 
-            // Fit canvas to parent container width for display (CSS handled)
             const renderContext = {
                 canvasContext: context,
                 viewport: viewport,
@@ -339,7 +264,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
 
     return (
         <div className="flex flex-col items-center gap-4">
-             {/* Pagination */}
             <div className="flex items-center gap-4 bg-slate-100 px-4 py-2 rounded-full shadow-sm">
                 <button 
                     disabled={page <= 1} 
@@ -358,7 +282,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
                 </button>
             </div>
 
-            {/* Canvas Container */}
             <div 
                 ref={containerRef}
                 className="relative border shadow-lg bg-slate-500 inline-block"
@@ -384,13 +307,9 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
     );
 };
 
-// ... (Rest of components: SplitTool, CompressTool, MergeTool, ImagesToPdfTool, UnlockTool, EditTool, StampTool remain unchanged) ...
-// NOTE: Re-outputting full file content for stability as requested in instructions, or just changed parts? 
-// Instruction: "ONLY return the xml in the above format... Only return files in the XML that need to be updated."
-// I will output the FULL content of PdfTools.tsx to ensure nothing breaks.
+// --- TOOL COMPONENTS ---
 
 const SplitTool = () => {
-    // ... Same implementation ...
     const [file, setFile] = useState<File | null>(null);
     const [numPages, setNumPages] = useState(0);
     const [splitMode, setSplitMode] = useState<'all' | 'range'>('all');
@@ -405,7 +324,7 @@ const SplitTool = () => {
             const arrayBuffer = await f.arrayBuffer();
             const pdfDoc = await PDFDocument.load(arrayBuffer);
             setNumPages(pdfDoc.getPageCount());
-            setPageNames({}); // Reset names
+            setPageNames({}); 
         }
     };
 
@@ -509,7 +428,6 @@ const SplitTool = () => {
 };
 
 const CompressTool = () => {
-    // ... Same implementation ...
     const [file, setFile] = useState<File | null>(null);
     const [compressedPdf, setCompressedPdf] = useState<Uint8Array | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -519,6 +437,7 @@ const CompressTool = () => {
         try {
             const arrayBuffer = await file.arrayBuffer();
             const pdfDoc = await PDFDocument.load(arrayBuffer);
+            // PDF-Lib does not have strong compression, but saving sometimes optimizes structure.
             const pdfBytes = await pdfDoc.save(); 
             setCompressedPdf(pdfBytes);
         } catch (e) { alert("Lỗi xử lý file."); }
@@ -556,7 +475,6 @@ const CompressTool = () => {
 };
 
 const MergeTool = () => {
-    // ... Same implementation ...
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files) setFiles(prev => [...prev, ...Array.from(e.target.files || [])]); };
@@ -616,7 +534,6 @@ const MergeTool = () => {
 };
 
 const ImagesToPdfTool = () => {
-    // ... Same implementation ...
     const [files, setFiles] = useState<File[]>([]);
     const [previews, setPreviews] = useState<string[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -635,7 +552,6 @@ const ImagesToPdfTool = () => {
 };
 
 const UnlockTool = () => {
-    // ... Same implementation ...
     const [file, setFile] = useState<File | null>(null);
     const [password, setPassword] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -649,7 +565,6 @@ const UnlockTool = () => {
 };
 
 const EditTool = () => {
-    // ... Same implementation ...
     const [file, setFile] = useState<File | null>(null);
     const [text, setText] = useState('');
     const [position, setPosition] = useState({ x: 50, y: 500 });
@@ -675,7 +590,6 @@ const EditTool = () => {
 };
 
 const StampTool = ({ stamps, setStamps }: { stamps: StampItem[], setStamps: any }) => {
-    // ... Same implementation ...
     const [file, setFile] = useState<File | null>(null);
     const [selectedStamp, setSelectedStamp] = useState<string | null>(null);
     const [newStampName, setNewStampName] = useState('');
@@ -826,7 +740,6 @@ const StampTool = ({ stamps, setStamps }: { stamps: StampItem[], setStamps: any 
 };
 
 const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
-    // ... (Keep existing implementation with only small text change)
     const [file, setFile] = useState<File | null>(null);
     const [page, setPage] = useState(1);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -834,12 +747,10 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
     const [isSelecting, setIsSelecting] = useState(false);
     const startPos = useRef<{x:number, y:number} | null>(null);
     const canvasWrapperRef = useRef<HTMLDivElement>(null);
-    const [canvasSize, setCanvasSize] = useState<{w:number, h:number}>({w:0, h:0});
     const [baseImage, setBaseImage] = useState<string | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [colorMode, setColorMode] = useState<'original'|'red'|'blue'>('original');
     const [saturation, setSaturation] = useState(1);
-    const [useAI, setUseAI] = useState(false);
 
     useEffect(() => { setSelection(null); setBaseImage(null); setResultImage(null); }, [page, file]);
 
@@ -872,7 +783,6 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
     }, [baseImage, colorMode, saturation]);
 
     const handleMouseDown = (e: React.MouseEvent) => {
-        // e.currentTarget refers to the canvas container passed via PdfViewer
         const target = e.currentTarget as HTMLDivElement;
         const rect = target.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -884,11 +794,9 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
 
     const handleMouseMove = (e: React.MouseEvent) => {
         if (!isSelecting || !startPos.current) return;
-        // e.currentTarget refers to the canvas container passed via PdfViewer
         const target = e.currentTarget as HTMLDivElement;
         const rect = target.getBoundingClientRect();
         
-        // Ensure mouse stays within bounds relative to container
         const currentX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
         const currentY = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
         
@@ -915,7 +823,6 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
         const canvas = canvasWrapperRef.current.querySelector('canvas');
         if (!canvas) return;
 
-        // Calculate scaling based on the wrapper size (which is inline-block and fits canvas exactly now)
         const scaleX = canvas.width / canvasWrapperRef.current.clientWidth;
         const scaleY = canvas.height / canvasWrapperRef.current.clientHeight;
 
@@ -960,7 +867,7 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
         else if (type === 'ai') {
              try {
                 const base64Image = tempCanvas.toDataURL('image/png').split(',')[1];
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
                 const response = await ai.models.generateContent({
                     model: "gemini-2.5-flash-image",
                     contents: {
@@ -1007,7 +914,7 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
 
         if (finalUrl) {
             setBaseImage(finalUrl);
-            setResultImage(finalUrl); // Will be updated by useEffect instantly
+            setResultImage(finalUrl); 
             setColorMode('original');
             setSaturation(1);
         }
@@ -1039,10 +946,8 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
                 </div>
             ) : (
                 <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Left: Viewer & Cropper */}
                     <div className="flex-1">
                         <div className="bg-slate-100 p-4 rounded-xl flex justify-center overflow-auto relative select-none">
-                            {/* Pass ref and events to PdfViewer directly */}
                             <PdfViewer 
                                 file={file} 
                                 page={page} 
@@ -1071,7 +976,6 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
                         <p className="text-xs text-center text-slate-500 mt-2">Kéo chuột để khoanh vùng con dấu cần tách</p>
                     </div>
 
-                    {/* Right: Controls & Result */}
                     <div className="w-full lg:w-80 space-y-6">
                          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                              <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -1103,7 +1007,6 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
                              </div>
                          </div>
 
-                         {/* Result Preview */}
                          {resultImage && (
                              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm animate-in fade-in">
                                  <h4 className="font-bold text-slate-800 mb-4">Kết quả</h4>
@@ -1112,7 +1015,6 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
                                  </div>
                                  
                                  <div className="space-y-4">
-                                    {/* Color Controls */}
                                     <div className="space-y-2">
                                         <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1"><Palette size={12}/> Chế độ màu</label>
                                         <div className="flex gap-2">
@@ -1131,7 +1033,6 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
                                         </div>
                                     </div>
 
-                                    {/* Saturation Slider */}
                                     <div>
                                         <label className="flex justify-between text-xs font-semibold text-slate-500 uppercase mb-1">
                                             <span className="flex items-center gap-1"><Droplets size={12}/> Độ tươi (Saturation)</span>
@@ -1146,7 +1047,6 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
                                         />
                                     </div>
 
-                                    {/* Actions */}
                                     <div className="pt-2 flex flex-col gap-2">
                                         <button 
                                             onClick={handleRemoveBg}
@@ -1178,4 +1078,72 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
             )}
         </div>
     );
+};
+
+// --- MAIN COMPONENT ---
+
+export const PdfTools: React.FC = () => {
+  const [activeTool, setActiveTool] = useState<ToolType>('split');
+  
+  const [stamps, setStamps] = useState<StampItem[]>(() => {
+      const saved = localStorage.getItem(STORAGE_KEY_STAMPS);
+      return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+      localStorage.setItem(STORAGE_KEY_STAMPS, JSON.stringify(stamps));
+  }, [stamps]);
+
+  const renderTool = () => {
+    switch (activeTool) {
+      case 'split': return <SplitTool />;
+      case 'compress': return <CompressTool />;
+      case 'merge': return <MergeTool />;
+      case 'images_to_pdf': return <ImagesToPdfTool />;
+      case 'unlock': return <UnlockTool />;
+      case 'edit': return <EditTool />;
+      case 'stamp': return <StampTool stamps={stamps} setStamps={setStamps} />;
+      case 'extract': return <ExtractStampTool setStamps={setStamps} />;
+      default: return <div>Select a tool</div>;
+    }
+  };
+
+  const menuItems: {id: ToolType, label: string, icon: any}[] = [
+      { id: 'split', label: 'Tách PDF', icon: Scissors },
+      { id: 'compress', label: 'Giảm Dung Lượng', icon: Minimize2 },
+      { id: 'merge', label: 'Ghép PDF', icon: Merge },
+      { id: 'images_to_pdf', label: 'Ảnh sang PDF', icon: Image },
+      { id: 'unlock', label: 'Mở Khóa PDF', icon: Unlock },
+      { id: 'edit', label: 'Chỉnh Sửa PDF', icon: Edit },
+      { id: 'stamp', label: 'Đóng Dấu', icon: Stamp },
+      { id: 'extract', label: 'Tách Con Dấu (AI)', icon: Crop },
+  ];
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-h-[600px] flex flex-col md:flex-row">
+      <div className="w-full md:w-64 bg-slate-50 border-r border-slate-200 p-4">
+        <h2 className="text-lg font-bold text-slate-800 mb-4 px-2">PDF Tools</h2>
+        <div className="space-y-1">
+            {menuItems.map(item => (
+                <button
+                    key={item.id}
+                    onClick={() => setActiveTool(item.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        activeTool === item.id 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
+                >
+                    <item.icon size={18} />
+                    {item.label}
+                </button>
+            ))}
+        </div>
+      </div>
+
+      <div className="flex-1 p-6 md:p-8 overflow-y-auto">
+        {renderTool()}
+      </div>
+    </div>
+  );
 };
