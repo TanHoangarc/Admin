@@ -83,6 +83,7 @@ const INITIAL_DATA: WebNfcProfile[] = [
 ];
 
 const STORAGE_KEY = 'nfc_admin_data';
+const ACCOUNTS_KEY = 'nfc_accounts';
 
 export const getProfiles = (): WebNfcProfile[] => {
   const stored = localStorage.getItem(STORAGE_KEY);
@@ -124,7 +125,7 @@ export const addProfile = (profileData: Omit<WebNfcProfile, 'id' | 'visits' | 'i
 
 export const deleteProfile = (id: string): void => {
   const profiles = getProfiles();
-  const updated = profiles.filter(p => p.id !== id);
+  const updated = profiles.filter((p => p.id !== id));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 };
 
@@ -133,3 +134,34 @@ export const updateProfile = (id: string, updates: Partial<WebNfcProfile>): void
     const updated = profiles.map(p => p.id === id ? { ...p, ...updates } : p);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 }
+
+// --- Data Export / Import Logic ---
+
+export const exportSystemData = () => {
+    const profiles = localStorage.getItem(STORAGE_KEY);
+    const accounts = localStorage.getItem(ACCOUNTS_KEY);
+    
+    const data = {
+        timestamp: new Date().toISOString(),
+        profiles: profiles ? JSON.parse(profiles) : [],
+        accounts: accounts ? JSON.parse(accounts) : []
+    };
+    
+    return JSON.stringify(data, null, 2);
+};
+
+export const importSystemData = (jsonString: string): boolean => {
+    try {
+        const data = JSON.parse(jsonString);
+        if (data.profiles && Array.isArray(data.profiles)) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data.profiles));
+        }
+        if (data.accounts && Array.isArray(data.accounts)) {
+            localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(data.accounts));
+        }
+        return true;
+    } catch (e) {
+        console.error("Import failed", e);
+        return false;
+    }
+};

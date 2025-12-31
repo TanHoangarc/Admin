@@ -1,15 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, List, ShieldCheck, Menu, X, LogOut, Wrench } from 'lucide-react';
+import { LayoutDashboard, List, ShieldCheck, Menu, X, LogOut, Wrench, Settings } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 import { ProfileManager } from './components/ProfileManager';
 import { PdfTools } from './components/PdfTools';
+import { SystemManager } from './components/SystemManager';
 import { Login } from './components/Login';
 import { getProfiles, addProfile, deleteProfile, updateProfile } from './services/mockService';
 import { checkSession, logout } from './services/authService';
 import { WebNfcProfile, AuthUser } from './types';
 
-type View = 'dashboard' | 'profiles' | 'tools';
+type View = 'dashboard' | 'profiles' | 'tools' | 'system';
 
 export default function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -81,6 +82,7 @@ export default function App() {
 
   const canAccessDashboard = user.role === 'admin';
   const canAccessProfiles = user.role === 'admin' || user.role === 'sales';
+  const canAccessSystem = user.role === 'admin';
 
   return (
     <div className="min-h-screen bg-slate-50 flex text-slate-900">
@@ -143,6 +145,17 @@ export default function App() {
                 <Wrench size={20} />
                 PDF Tools
             </button>
+
+            {/* 4. System - Admin Only */}
+            {canAccessSystem && (
+                <button 
+                    onClick={() => { setCurrentView('system'); setSidebarOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${currentView === 'system' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
+                >
+                    <Settings size={20} />
+                    Hệ thống
+                </button>
+            )}
         </nav>
 
         <div className="p-4 border-t border-slate-800">
@@ -183,6 +196,10 @@ export default function App() {
             
             {currentView === 'tools' && (
                 <PdfTools />
+            )}
+
+            {currentView === 'system' && canAccessSystem && (
+                <SystemManager profiles={profiles} />
             )}
         </div>
       </main>
