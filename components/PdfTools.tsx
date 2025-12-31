@@ -92,6 +92,41 @@ const trimCanvas = (sourceCanvas: HTMLCanvasElement): HTMLCanvasElement => {
     return trimmed;
 };
 
+// --- Helper: Resize Image for Storage Optimization ---
+const resizeImage = (file: File, maxWidth: number = 250): Promise<string> => {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new window.Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Scale down if image is wider than maxWidth
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    // Use PNG to preserve transparency
+                    resolve(canvas.toDataURL('image/png'));
+                } else {
+                    // Fallback to original if canvas fails
+                    resolve(e.target?.result as string);
+                }
+            };
+            img.src = e.target?.result as string;
+        };
+        reader.readAsDataURL(file);
+    });
+};
+
 // --- Helper: Remove White Background ---
 const removeWhiteBackground = async (dataUrl: string): Promise<string> => {
     return new Promise((resolve) => {
@@ -608,30 +643,30 @@ const StampTool = ({ stamps, setStamps }: { stamps: StampItem[], setStamps: any 
         setViewSize({ width: viewW, height: viewH });
     };
 
-    const handleAddStamp = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAddStamp = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
+            setIsAdding(true);
             const files = Array.from(e.target.files);
-            const newStampsPromises = files.map(file => {
-                return new Promise<StampItem>((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        if (typeof reader.result === 'string') {
-                            resolve({
-                                id: Date.now().toString() + Math.random().toString(), // Ensure unique ID
-                                name: file.name.split('.')[0], // Use filename as default name
-                                url: reader.result,
-                                created: Date.now()
-                            });
-                        }
-                    };
-                    reader.readAsDataURL(file);
-                });
-            });
+            
+            try {
+                // Resize images before processing to save storage
+                const newStampsPromises = files.map(file => resizeImage(file));
+                const optimizedUrls = await Promise.all(newStampsPromises);
+                
+                const newStamps = optimizedUrls.map((url, index) => ({
+                    id: Date.now().toString() + Math.random().toString(), // Ensure unique ID
+                    name: files[index].name.split('.')[0], // Use filename as default name
+                    url: url,
+                    created: Date.now()
+                }));
 
-            Promise.all(newStampsPromises).then(newItems => {
-                setStamps((prev: any) => [...prev, ...newItems]);
+                setStamps((prev: any) => [...prev, ...newStamps]);
+            } catch (error) {
+                console.error("Error processing stamps", error);
+                alert("Lỗi khi xử lý ảnh. Vui lòng thử lại.");
+            } finally {
                 setIsAdding(false);
-            });
+            }
         }
     };
 
@@ -1222,7 +1257,13 @@ export const PdfTools: React.FC = () => {
     });
 
     useEffect(() => {
-        localStorage.setItem(STORAGE_KEY_STAMPS, JSON.stringify(stamps));
+        try {
+            localStorage.setItem(STORAGE_KEY_STAMPS, JSON.stringify(stamps));
+        } catch (e) {
+            console.error("Storage limit exceeded", e);
+            // Alert user instead of crashing
+            alert("Bộ nhớ trình duyệt đã đầy! Không thể lưu thêm con dấu. Vui lòng xóa bớt hoặc sử dụng ảnh nhỏ hơn.");
+        }
     }, [stamps]);
 
     const renderTool = () => {
