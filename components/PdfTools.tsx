@@ -866,14 +866,19 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
         } 
         else if (type === 'ai') {
              try {
-                // Check multiple sources for the key
-                // 1. injected process.env.API_KEY (from vite config define)
-                // 2. import.meta.env.VITE_GEMINI_API_KEY (Vite default for .env)
-                // 3. import.meta.env.VITE_API_KEY
-                const apiKey = process.env.API_KEY || ((import.meta as any).env && (import.meta as any).env.VITE_GEMINI_API_KEY) || ((import.meta as any).env && (import.meta as any).env.VITE_API_KEY) || '';
+                // Determine API Key with robust fallbacks
+                // 1. Check runtime Vite env (requires VITE_ prefix or config exposure)
+                // 2. Check build-time injected process.env (from vite.config.ts define)
+                
+                // Note: On Vercel, if you change settings, you MUST Redeploy for build-time keys to update.
+                const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || 
+                               (import.meta as any).env?.VITE_API_KEY || 
+                               process.env.GEMINI_API_KEY || 
+                               process.env.API_KEY || 
+                               '';
                 
                 if (!apiKey || apiKey === '') {
-                    throw new Error("Missing API Key. In Vercel Project Settings, add a new Environment Variable named 'GEMINI_API_KEY' (or 'VITE_GEMINI_API_KEY') with your Google AI Studio key.");
+                    throw new Error("API Key Missing. \n\n1. Go to Vercel Project Settings > Environment Variables.\n2. Add 'VITE_GEMINI_API_KEY' with your key.\n3. IMPORTANT: Go to Deployments and Redeploy to apply changes.");
                 }
 
                 const base64Image = tempCanvas.toDataURL('image/png').split(',')[1];
