@@ -1102,7 +1102,7 @@ const ExtractStampTool = ({ setStamps }: { setStamps: any }) => {
                                          <div className="bg-white p-2 rounded border border-red-100 text-xs text-slate-600">
                                              <strong>Cách khắc phục:</strong>
                                              <ol className="list-decimal pl-4 mt-1 space-y-1">
-                                                 <li>Vào Vercel Project Settings > Environment Variables.</li>
+                                                 <li>Vào Vercel Project Settings &gt; Environment Variables.</li>
                                                  <li>Đảm bảo đã thêm <code>VITE_GEMINI_API_KEY</code>.</li>
                                                  <li className="text-red-600 font-bold">Quan trọng: Vào tab Deployments, chọn Redeploy để cập nhật Key mới vào ứng dụng.</li>
                                              </ol>
