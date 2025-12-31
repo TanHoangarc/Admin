@@ -10,7 +10,7 @@ const DEFAULT_ACCOUNTS = [
     { id: '2', username: 'admin', password: 'admin123', role: 'admin' as UserRole, allowedProfileIds: [] },
     { id: '3', username: 'sales_andy', password: '123', role: 'sales' as UserRole, allowedProfileIds: ['1'] }, 
     { id: '4', username: 'sales_jaden', password: '123', role: 'sales' as UserRole, allowedProfileIds: ['2'] },
-    { id: '5', username: 'account_user', password: '123', role: 'account' as UserRole, allowedProfileIds: [] }
+    { id: '5', username: 'account', password: 'Jwc123', role: 'account' as UserRole, allowedProfileIds: [] }
 ];
 
 // Initialize accounts in localStorage
